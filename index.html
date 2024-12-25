@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рабочий график</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Общие стили */
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #e0f7fa, #e1bee7);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #6200ea, #3700b3);
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #444;
+            font-size: 1.8rem;
+        }
+
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filter-controls input, 
+        .filter-controls select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            flex: 1;
+        }
+
+        .btn-primary, .btn-secondary, .btn-danger {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6200ea, #3700b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3700b3, #2c003e);
+        }
+
+        .btn-secondary {
+            background: #00bfa5;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #00796b;
+        }
+
+        .btn-danger {
+            background: #e53935;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b71c1c;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .schedule-table th, 
+        .schedule-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .schedule-table th {
+            background: linear-gradient(135deg, #6200ea, #3700b3);
+            color: white;
+        }
+
+        .employee-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Рабочий график</h1>
+        </header>
+        <main>
+            <section class="search-section">
+                <h2>Поиск и сортировка</h2>
+                <div class="filter-controls">
+                    <input type="text" v-model="searchQuery" placeholder="Поиск по имени...">
+                    <select v-model="sortOption">
+                        <option value="">Без сортировки</option>
+                        <option value="name">Сортировать по имени</option>
+                        <option value="shift">Сортировать по смене</option>
+                        <option value="date">Сортировать по дате</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="form-section">
+                <h2>Добавить смену</h2>
+                <form @submit.prevent="addSchedule" class="schedule-form">
+                    <div class="form-group">
+                        <label for="employeeName">Имя сотрудника</label>
+                        <input id="employeeName" type="text" v-model="newSchedule.name" placeholder="Введите имя" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shift">Смена</label>
+                        <select id="shift" v-model="newSchedule.shift" required>
+                            <option disabled value="">Выберите смену</option>
+                            <option>Утро</option>
+                            <option>День</option>
+                            <option>Вечер</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Дата</label>
+                        <input id="date" type="date" v-model="newSchedule.date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="photo">Фото</label>
+                        <input id="photo" type="file" @change="onFileChange" accept="image/*">
+                    </div>
+                    <button type="submit" class="btn-primary">Добавить</button>
+                </form>
+            </section>
+
+            <section class="table-section">
+                <h2>График работы</h2>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Имя</th>
+                            <th>Смена</th>
+                            <th>Дата</th>
+                            <th>Фото</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(schedule, index) in filteredSchedules" :key="index">
+                            <td>{{ schedule.name }}</td>
+                            <td>{{ schedule.shift }}</td>
+                            <td>{{ schedule.date }}</td>
+                            <td>
+                                <img :src="schedule.photo" alt="Фото сотрудника" v-if="schedule.photo" class="employee-photo">
+                            </td>
+                            <td>
+                                <button @click="openEditModal(index)" class="btn-secondary">Редактировать</button>
+                                <button @click="deleteSchedule(index)" class="btn-danger">Удалить</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <div v-if="showModal" class="modal">
+                <div class="modal-content">
+                    <h3>Редактировать запись</h3>
+                    <form @submit.prevent="saveEdit">
+                        <div class="form-group">
+                            <label for="modalName">Имя сотрудника</label>
+                            <input id="modalName" type="text" v-model="editableSchedule.name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modalShift">Смена</label>
+                            <select id="modalShift" v-model="editableSchedule.shift" required>
+                                <option>Утро</option>
+                                <option>День</option>
+                                <option>Вечер</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="modalDate">Дата</label>
+                            <input id="modalDate" type="date" v-model="editableSchedule.date" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Сохранить</button>
+                        <button type="button" @click="closeModal" class="btn-danger">Отмена</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/vue@3"></script>
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    schedules: JSON.parse(localStorage.getItem('schedules')) || [],
+                    newSchedule: { name: '', shift: '', date: '', photo: '' },
+                    searchQuery: '',
+                    sortOption: '',
+                    showModal: false,
+                    editableSchedule: null,
+                    editIndex: null
+                };
+            },
+            computed: {
+                filteredSchedules() {
+                    let result = [...this.schedules];
+
+                    if (this.searchQuery) {
+                        result = result.filter(schedule =>
+                            schedule.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                        );
+                    }
+
+                    if (this.sortOption) {
+                        result.sort((a, b) => a[this.sortOption].localeCompare(b[this.sortOption]));
+                    }
+
+                    return result;
+                }
+            },
+            methods: {
+                addSchedule() {
+                    if (this.newSchedule.name && this.newSchedule.shift && this.newSchedule.date) {
+                        if (!this.newSchedule.photo) {
+                            alert('Пожалуйста, добавьте фото сотрудника.');
+                            return;
+                        }
+                        this.schedules.push({ ...this.newSchedule });
+                        this.saveToLocalStorage();
+                        this.resetForm();
+                    } else {
+                        alert('Заполните все поля!');
+                    }
+                },
+                resetForm() {
+                    this.newSchedule = { name: '', shift: '', date: '', photo: '' };
+                },
+                onFileChange(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.newSchedule.photo = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                deleteSchedule(index) {
+                    if (confirm('Удалить запись?')) {
+                        this.schedules.splice(index, 1);
+                        this.saveToLocalStorage();
+                    }
+                },
+                openEditModal(index) {
+                    this.editIndex = index;
+                    this.editableSchedule = { ...this.schedules[index] };
+                    this.showModal = true;
+                },
+                saveEdit() {
+                    if (this.editableSchedule) {
+                        this.schedules.splice(this.editIndex, 1, { ...this.editableSchedule });
+                        this.saveToLocalStorage();
+                        this.closeModal();
+                    }
+                },
+                closeModal() {
+                    this.showModal = false;
+                    this.editableSchedule = null;
+                    this.editIndex = null;
+                },
+                saveToLocalStorage() {
+                    localStorage.setItem('schedules', JSON.stringify(this.schedules));
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
